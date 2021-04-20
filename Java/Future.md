@@ -50,21 +50,99 @@ Future 인터페이스는 비동기 처리의 결과를 나타내며, 처리가 
 
 # Future Interface의 구현체
 
-Future는 아래와 같이 많은 구현체를 가지고 있습니다.
+Future는 많은 구현체를 가지고 있습니다.
 
- - CompletableFuture
- - CountedCompleter
- - ForkJoinTask
- - FutureTask
- - RecursiveAction
- - RecursiveTask
- - SwingWorker
+ 1. CompletableFuture
+- ```CompletatbleFuture```는 ```Future```와 ```CompletionStage```를 구현한 클래스 입니다.
+      ```Future```이지만 직접 쓰레드를 생성하지 않고 Async로 작업을 처리할 수 있고, 여러 ```CompletableFuture```를 병렬로 처리하거나,
+      병합하여 처리할 수 있게 합니다. 또한 Cancel, Error를 처리할 수 있는 방법을 제공합니다.
+- ```Future```로 사용하기
+    ```
+    CompletableFuture<String> future
+        = new CompletableFuture<>();
+    
+    Executors.newCachedThreadPool().submit(() -> {
+        Thread.sleep(2000);
+        future.complete("End!");
+        reture null;
+    });
+    
+    System.out.println(future.get());
+    ```
+    위의 코드에서는 ```newCachedThreadPool()```으로 직접 쓰레드를 만들었고, 그 쓰레드의 작업이 완료되면 ```complete("Finished")```
+    으로 결과를 Future에 저장하였습니다. 결과가 저장되면 ```get()```은 값을 리턴하며 Blocking된 상태에서 빠져나옵니다.
+    
+
+- ```Cancel()``` 예외 처리
+  
+  CompletableFuture는 쓰레드에서 ```cancel()```이 호출 될 수가 있는데 이 때 ```get()```에서 ```CancellationException```이 발생합니다.
+  다른 예외들과 마찬가지로 ```try - catch``` 블럭에서 ```CancellationException```으로 예외 처리를 할수 있습니다.
+
+
+
+- ```supplyAsync(), runAsync()```
+    CompletableFuture는 ```supplyAsync(), runAsync()```를 사용해서 쓰레드를 생성하지 않고 작업을 Async로 처리할 수 있습니다.
+
+    ```
+    CompletableFuture<String> future 
+        = CompletableFuture.supplyAsync(() -> {
+        System.out.println("Start");
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return "Async Result";
+    });
+    
+    System.out.println(future.get());
+    ```
+    
+    제일 마지막에 호출되는 ```future.get()```은 메인 쓰레드에서 2초동안 Blocking 되고 완료하면 리턴값을 가져옵니다.
+    
+    ```runAsync()``` 도 사용방법은 같지만 차이점이 있다면 ```supplyAsync()``` 리턴 값이 있지만  ```runAsync()```는 리턴 값이 없습니다.
+    따라서  ```runAsync()```를 사용하고 싶다면 ```CompletableFuture<Void>``` 으로 선언해야 하며 결과가 완료될 때까지 ```get()```은 
+    Blocking 되지만 ```null```을 리턴합니다.
+
+- Exception handling
+  
+  ```CompletableFuture```에서 작업을 처리하는 중에 Exception이 발생할 수 있습니다. 이런 경우, ```handle()```로 예외를 처리할 수 있습니다.
+  ```
+  CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+      String name = null;
+      if (name == null) {
+          throw new RuntimeException("Computation error!");
+      }
+      return name;
+  }).handle((s, t) -> s != null ? s : "Stranger!");
+  
+  log(future.get());
+   ```
+  
+- 리턴 값이 있는 작업 수행 ```thenApply()```
+- 리턴 값이 없는 작업 수행 ```thenAccept()```
+- 여러 작업을 순차적으로 수행 ```thenCompose()```
+- 여러 작업을 동시에 수행 ```thenCombine()```
+- 여러개의 CompletableFuture 중에서 가장 빠른 1개의 결과만 가져온다. ```anyOf()```
+- 여러개의 CompletableFuture 모든 결과를 처리한다.. ```allOf()```
+- 위에 설명 했던 메서드들의 뒤에 Async를 붙이면 동일한 쓰레드가 아닌 다른 쓰레드를 사용하여 처리합니다. 예를 들면 thenAccept() 대신 thenAcceptAsync()를 사용합니다.
+    
+
+// 추후 파일 분리 예정
+
+ 2. CountedCompleter
+ 3. ForkJoinTask
+ 4. FutureTask
+ 5. RecursiveAction
+ 6. RecursiveTask
+ 7. SwingWorker
 
  
- // 추후 작성 예정
+ 
 
 
 
 ### ref
 - [Sync VS Async, Blocking VS Non-Blocking](https://velog.io/@codemcd/Sync-VS-Async-Blocking-VS-Non-Blocking-sak6d01fhx)
 - [Oracle Future Documentation](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Future.html)
+- [Java - CompletableFuture 사용 방법](https://codechacha.com/ko/java-completable-future/)
