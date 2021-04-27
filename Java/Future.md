@@ -48,11 +48,10 @@ Future 인터페이스는 비동기 처리의 결과를 나타내며, 처리가 
 
 간단히 말하자면 비동기 작업을 처리 할 때 사용하는 인터페이스이며 Javascript의 Promise와 비슷하다고 생각합니다.
 
-# Future Interface의 구현체
+# CompletableFuture
 
-Future는 많은 구현체를 가지고 있습니다.
+Future는 많은 구현체를 가지고 있지만 가장 자주 사용하는 ```CompletableFuture```에 대해 알아보겠습니다.
 
- 1. CompletableFuture
 - ```CompletatbleFuture```는 ```Future```와 ```CompletionStage```를 구현한 클래스 입니다.
       ```Future```이지만 직접 쓰레드를 생성하지 않고 Async로 작업을 처리할 수 있고, 여러 ```CompletableFuture```를 병렬로 처리하거나,
       병합하여 처리할 수 있게 합니다. 또한 Cancel, Error를 처리할 수 있는 방법을 제공합니다.
@@ -120,27 +119,193 @@ Future는 많은 구현체를 가지고 있습니다.
    ```
   
 - 리턴 값이 있는 작업 수행 ```thenApply()```
+  ```
+  CompletableFuture<String> future1
+        = CompletableFuture.supplyAsync(() -> "Future1");
+  
+  CompletableFuture<String> future2
+        = future1.thenApply(s -> s + " + Future2");
+  
+  CompletableFuture<String> future3
+        = CompletableFuture.supplyAsync(() -> "Future3")
+                           .thenApply(s -> s + " + H2");
+  
+  System.out.println("future1.get(): " + future1.get());
+  System.out.println("future2.get(): " + future2.get());
+  System.out.println("future3.get(): " + future3.get());
+  ```
+  위 코드의 결과는<br>
+  "Future1"<br>
+  "Future1 + Future2"<br>
+  "Future3 + H2"<br>
+  와 같이 나타납니다.
+  
+
 - 리턴 값이 없는 작업 수행 ```thenAccept()```
+  ```
+  CompletableFuture<String> future1
+        = CompletableFuture.supplyAsync(() -> "Hello");
+  
+  CompletableFuture<String> future2
+        = future1.thenAccept(s -> s + " World");
+  
+  System.out.println("future1.get():" + future1.get());
+  System.out.println("future2.get():" + future2.get());
+  ```
+  위 코드의 결과는<br>
+  "Hello"<br>
+  null<br>
+  와 같이 나타납니다. ```thenAccept```는 리턴값이 없기 때문에 ```CompletableFuture<Void>```를 리턴하게 됩니다.   
+  
+
 - 여러 작업을 순차적으로 수행 ```thenCompose()```
+  ```
+  CompletableFuture<String> future1
+        = CompletableFuture.supplyAsync(() -> "Hello")
+                           .thenComplose(s -> CompletableFuture.supplyAsync(() -> s + " World"));
+                           .thenComplose(s -> CompletableFuture.supplyAsync(() -> s + " !!!"));
+  System.out.println(future1.get());
+  ```  
+
+  ```thenCompose()```는 체인처럼 세개의 ```CompletableFuture```를 하나로 만들어 줍니다.
+  첫번째 결과가 리턴되면 그 결과를 두번째로 전달하며, 순차적으로 작업이 처리됩니다.
+  결과값으로는 <br>
+  "Hello World !!!"가 리턴 됩니다.
+
+
 - 여러 작업을 동시에 수행 ```thenCombine()```
-- 여러개의 CompletableFuture 중에서 가장 빠른 1개의 결과만 가져온다. ```anyOf()```
-- 여러개의 CompletableFuture 모든 결과를 처리한다.. ```allOf()```
-- 위에 설명 했던 메서드들의 뒤에 Async를 붙이면 동일한 쓰레드가 아닌 다른 쓰레드를 사용하여 처리합니다. 예를 들면 thenAccept() 대신 thenAcceptAsync()를 사용합니다.
-    
+  ```
+  CompletableFuture<String> future1
+        = CompletableFuture.supplyAsync(() -> "Future1")
+                           .thenApply((s) -> {
+                                System.out.println("Start Future1");
+                                try {
+                                    Thread.sleep(2000);
+                                } catch(InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                                return s + "!";
+                            });
+  
+  CompletableFuture<String> future2
+        = CompletableFuture.supplyAsync(() -> "Future2")
+                           .thenApply((s) -> {
+                                System.out.println("Start Future2");
+                                try {
+                                    Thread.sleep(2000);
+                                } catch(InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                                return s + "!";
+                            });
+  
+  future1.thenCombine(future2, (s1, s2) -> s1 + " + " + s2)
+         .thenAccept((s) -> System.out.println(s));
+  ```
+  ```thenCompose()```는 여러 ```CompletableFuture```를 병렬로 처리하도록 만듭니다.
+  모든 처리가 완료되고 그 결과를 하나로 합칠 수 있습니다.
+  결과를 보면<br>
+  "Starting future1"<br>
+  "Starting future2"<br>
+  "Future1! + Future2!"<br>
+  로 리턴되는 것을 볼수 있는데 ```thenApply()```가 같은 쓰레드를 사용해서 순차적으로 처리 된것처럼 보인다.
 
-// 추후 파일 분리 예정
+- 위에 설명 했던 메서드들의 뒤에 Async를 붙이면 동일한 쓰레드가 아닌 다른 쓰레드를 사용하여 처리합니다. 예를 들면 ```thenAccept()``` 대신 ```thenAcceptAsync()```를 사용합니다.
+  ```thenAccept()``` 말고도 예제에서 봤던 모든 메소드들도 뒤에 async가 붙은 메소드와 pair로 존재합니다.
+  ```
+  CompletableFuture<String> future1
+        = CompletableFuture.supplyAsync(() -> "Future1")
+                           .thenApplyAsync((s) -> {
+                                System.out.println("Start Future1");
+                                try {
+                                    Thread.sleep(2000);
+                                } catch(InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                                return s + "!";
+                            });
+  
+  CompletableFuture<String> future2
+        = CompletableFuture.supplyAsync(() -> "Future2")
+                           .thenApplyAsync((s) -> {
+                                System.out.println("Start Future2");
+                                try {
+                                    Thread.sleep(2000);
+                                } catch(InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                                return s + "!";
+                            });
+  
+  future1.thenCombine(future2, (s1, s2) -> s1 + " + " + s2)
+         .thenAccept((s) -> System.out.println(s));
+  ```
+  아까와 거의 동일한 코드지만 ```thenApply()``` 대신 ```thenApplyAsync()```를 사용해서 다른쓰레드로 처리되어 병렬로 처리되는 것을 볼수 있다.
 
- 2. CountedCompleter
- 3. ForkJoinTask
- 4. FutureTask
- 5. RecursiveAction
- 6. RecursiveTask
- 7. SwingWorker
 
- 
- 
+- ```anyOf()```는 여러개의 CompletableFuture 중에서 가장 빠른 1개의 결과만 가져온다.
+  ```
+  CompletableFuture<String> future1 = CompletableFuture
+          .supplyAsync(() -> {
+              log("starting future1");
+              return "Future1";
+          });
+  
+  CompletableFuture<String> future2 = CompletableFuture
+          .supplyAsync(() -> {
+              log("starting future2");
+              return "Future2";
+          });
+  
+  CompletableFuture<String> future3 = CompletableFuture
+          .supplyAsync(() -> {
+              log("starting future3");
+              return "Future3";
+          });
+          
+  CompletableFuture.anyOf(future1, future2, future3)
+                   .thenAccept(s -> System.out.println("Result: " + s));
+  ```
+  위 예제의 결과는<br>
+  starting future1<br>
+  starting future2<br>
+  starting future3<br>
+  Result: Future2<br>
+  와 같이 가장 빨리 작업이 끝난 Future2번의 결과만 볼수 있다.
 
+  
+- ```allOf()```는 여러개의 CompletableFuture 모든 결과를 처리한다.
+  ```
+  CompletableFuture<String> future1 = CompletableFuture
+        .supplyAsync(() -> "Future1");
 
+  CompletableFuture<String> future2 = CompletableFuture
+  .supplyAsync(() -> "Future2");
+  
+  CompletableFuture<String> future3 = CompletableFuture
+  .supplyAsync(() -> "Future3");
+  
+  CompletableFuture<Void> combinedFuture
+  = CompletableFuture.allOf(future1, future2, future3);
+  
+  System.out.println("combinedFuture.get() : " + combinedFuture.get());
+  System.out.println("future1.isDone() : " + future1.isDone());
+  System.out.println("future2.isDone() : " + future2.isDone());
+  System.out.println("future3.isDone() : " + future3.isDone());
+  
+  String combined = Stream.of(future1, future2, future3)
+                          .map(CompletableFuture::join)
+                          .collect(Collectors.joining(" + "));
+  System.out.println("Combined : " + combined);
+  ```
+  위 예제의 결과는<br>
+  combinedFuture.get() : null<br>
+  true<br>
+  true<br>
+  true<br>
+  Combined : Future1 + Future2 + Future3<br>
+  와 같이 결과를 얻을수 있다.
+  ```allOf()```의 다른 점은 Stream api를 사용해서 결과를 처리해야하고 ```get()```은 null을 리턴한다.
 
 ### ref
 - [Sync VS Async, Blocking VS Non-Blocking](https://velog.io/@codemcd/Sync-VS-Async-Blocking-VS-Non-Blocking-sak6d01fhx)
