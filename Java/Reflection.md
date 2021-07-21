@@ -277,6 +277,161 @@ Get public methods in both Parent and Child: public final native java.lang.Class
 Get public methods in both Parent and Child: public final native void java.lang.Object.notify()
 Get public methods in both Parent and Child: public final native void java.lang.Object.notifyAll()
 ```
+#### Method 호출
+
+```Method.invoke()```로 생성한 메소드 객체에서 메소드를 호출할수 있다. 첫번째 인자는 호출하려는 객체이고,
+두번째 인자는 전달할 파라미터 값이다.
+
+```
+class Test {
+    public static void main(String[] args) {
+        Child child = new Child();
+    
+        Class clazz = Class.forName("test.Child");
+        Method method = clazz.getDeclaredMethod("method4", int.class);
+        int resultValue = (int) method.invoke(child, 10);
+        System.out.println("return value: " + resultValue);    
+    }
+}
+```
+
+Output
+
+```
+method4: 10
+return value: 10
+```
+
+private 메소드를 가져오기 위해 위와 같은 방법을 사용하면 에러가 발생한다.
+하지만 ```setAccessible(true)```로 설정해 주면 private 메소드에 접근이 가능하다.
+
+```
+class Test {
+    public static void main(String[] args) {
+        Child child = new Child();
+    
+        Class clazz = Class.forName("test.Parent");
+        Method method = clazz.getDeclaredMethod("method1");
+        method.setAccessible(true);
+        method.invoke(child);    
+    }
+}
+```
+
+Output
+
+```
+method1
+```
+
+
+#### Field 찾기
+
+```getDeclaredField()```에 전달된 이름과 일치하는 Field 를 찾아줍니다.
+
+```
+class Test {
+    public static void main(String[] args) {
+        Class clazz = Class.forName("test.Child");
+        Field field = clazz.getDeclaredField("cstr1");
+        System.out.println("Find out cstr1 field in Child: " + field);    
+    }
+}
+```
+
+Output
+
+```
+Find out cstr1 field in Child: public java.lang.String test.Child.cstr1
+```
+
+만약 모든 필드를 찾고 싶다면 ```getDeclaredFields()```를 사용하면 된다.
+위에서 설명한 것과 같이 상속받은 객체의 정보를 찾아주지는 않는다.
+
+```
+class Test {
+    public static void main(String[] args) {
+        Class clazz = Class.forName("test.Child");
+        Field[] fields = clazz.getDeclaredFields();
+        for(Field field : fields) {
+            System.out.println("Get fields in Child: " + field);        
+        }
+    }
+}
+```
+
+Output
+
+```
+Get fields in Child: public java.lang.String test.Child.cstr1
+Get fields in Child: private java.lang.String test.Child.cstr2
+```
+
+상속 받은 클래스를 포함한 public Field를 찾으려면 ```getFields()```를 사용하면 된다.
+
+```
+class Test {
+    public static void main(String[] args) {
+        Class clazz = Class.forName("test.Child");
+        Field[] fields = clazz.getFields();
+        for(Field field : fields) {
+            System.out.println("Get public fields in both Parent and Child: " + field);        
+        }
+    }
+}
+```
+
+Output
+
+```
+Get public fields in both Parent and Child: public java.lang.String test.Child.cstr1
+Get public fields in both Parent and Child: public java.lang.String test.Parent.str2
+```
+
+#### Field 변경
+
+```
+class Test {
+    public static void main(String[] args) {
+        Child child = new Child();
+        Class clazz = Class.forName("test.Parent");
+        Field field = clazz.getField("cstr1");
+        System.out.println("child.cstr1: " + field.get(child));
+        
+        field.set(child, "cstr1");
+        System.out.println("child.cstr1: " + field.get(child));    
+    }
+}
+```
+
+Output
+
+```
+child.cstr1: 1
+child.cstr1: cstr1
+```
+
+private 변수를 수정하려면 위와 같이 ```setAccessible(true)```로 접근 상태를 변경하면 된다.
+
+```
+class Test {
+    public static void main(String[] args) {
+        Child child = new Child();
+        Class clazz = Class.forName("test.Parent");
+        Field field = clazz.getField("cstr2");
+        field.setAccessible(true);
+        field.set(child, "cstr2");
+        System.out.println("child.cstr2: " + field.get(child));    
+    }
+}
+```
+
+Output
+
+```
+child.cstr2: cstr2
+```
+
 
 ### ref
  - [오라클 공식문서 - java.lang.relfect](https://docs.oracle.com/javase/8/docs/api/java/lang/reflect/package-summary.html#a8)
