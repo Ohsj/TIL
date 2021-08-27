@@ -19,3 +19,5 @@ Groovy는 자바 문법과 유사하여 자바 개발자가 쉽게 익힐 수 �
 ### ref
 - [Gradle 공식 GitHub](https://github.com/gradle/gradle)
 - [Gradle이란 무엇일까?](https://madplay.github.io/post/what-is-gradle)
+- [Gradle이란??](https://velog.io/@hwany/gradle)
+- [Gradle: build.gradle vs settings.gradle vs gradle.properties](https://www.baeldung.com/gradle-build-settings-properties)
